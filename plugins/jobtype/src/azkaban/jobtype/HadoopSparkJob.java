@@ -54,7 +54,7 @@ import azkaban.utils.StringUtils;
  * Use this in conjunction with  {@link azkaban.jobtype.HadoopSecureSparkWrapper}
  *
  * </pre>
- * 
+ *
  * @see azkaban.jobtype.HadoopSecureSparkWrapper
  */
 public class HadoopSparkJob extends JavaProcessJob {
@@ -100,7 +100,7 @@ public class HadoopSparkJob extends JavaProcessJob {
 
   @Override
   public void run() throws Exception {
-    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(),
+    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(), getSysProps(),
         getWorkingDirectory());
 
     if (shouldProxy && obtainTokens) {

@@ -102,7 +102,7 @@ public class HadoopPigJob extends JavaProcessJob {
 
   @Override
   public void run() throws Exception {
-    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(),
+    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(), getSysProps(),
         getWorkingDirectory());
 
     if (shouldProxy && obtainTokens) {

@@ -47,7 +47,7 @@ public class JavaJob extends JavaProcessJob {
 
   public JavaJob(String jobid, Props sysProps, Props jobProps, Logger log) {
     super(jobid, sysProps, new Props(sysProps, jobProps), log);
-    
+
     getJobProps().put(CommonJobProperties.JOB_ID, jobid);
   }
 
@@ -153,7 +153,7 @@ public class JavaJob extends JavaProcessJob {
 
   @Override
   public void run() throws Exception {
-    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(),
+    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(), getSysProps(),
         getWorkingDirectory());
     super.run();
   }

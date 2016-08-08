@@ -24,9 +24,17 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.Properties;
 
+// delete later
+import java.io.PrintWriter;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.PrepareStatement;
+import java.sql.ResultSet;
 
 /**
  * HadoopConfigurationInjector is responsible for inserting links back to the
@@ -47,6 +55,37 @@ public class HadoopConfigurationInjector {
 
   // Prefix for properties to be automatically injected into the Hadoop conf.
   public static final String INJECT_PREFIX = "hadoop-inject.";
+
+  // Key for job name
+  public static final String AZKABAN_JOB_NAME_KEY = "azkaban.job.id";
+
+  // Key for workflow name
+  public static final String AZKABAN_WORKFLOW_NAME_KEY = "azkaban.flow.flowid";
+
+  // Key for project name
+  public static final String AZKABAN_PROJECT_NAME_KEY = "azkaban.flow.projectname";
+
+  // Key for user's consent to run on Rain hosts
+  public static final Boolean RAIN_USER_PERMISSION = "elastic.consent";
+
+  // Key for If elastic grid feature is turned on
+  public static final Boolean RAIN_ENABLE= "elastic.switch";
+
+  // Key for CandidateJob DB hostname
+  public static final String RAIN_DB_HOSTNAME = "elastic.dbhostname";
+
+  // Key for CandidateJob Database name
+  public static final String RAIN_DB_NAME = "elastic.database";
+
+  // Key for CandidateJob Table name
+  public static final String RAIN_TABLE_NAME = "elastic.table";
+
+  // Key for username to Candidate Job Databse
+  public static final String RAIN_DB_USERNAME = "elastic.usernameDB";
+
+  // Key fro password to Candidate Job Database
+  public static final String RAIN_DB_PASSWORD = "elastic.passwordDB";
+
 
   /*
    * To be called by the forked process to load the generated links and Hadoop
@@ -79,9 +118,13 @@ public class HadoopConfigurationInjector {
    * any job properties that begin with the designated injection prefix.
    *
    * @param props The Azkaban properties
+   * @param sysProps The Azkaban system properties
    * @param workingDir The Azkaban job working directory
    */
-  public static void prepareResourcesToInject(Props props, String workingDir) {
+  public static void prepareResourcesToInject(Props props, Props sysProps, String workingDir) {
+    PrepareStatement stmt = null;
+    ResultSet rs = null;
+
     try {
       Configuration conf = new Configuration(false);
 
@@ -101,6 +144,65 @@ public class HadoopConfigurationInjector {
         }
       }
 
+      // delete later
+      PrintWriter writer = new PrintWriter("sherwood.txt", "UTF-8");
+      writer.println("jobProps: ");
+      for (String s: props.localKeySet()) {
+        String value = props.get(s);
+        writer.println("key: " + s);
+        writer.println("value: " + value);
+      }
+      writer.println("sysProps: ");
+      for (String s: sysProps.localKeySet()) {
+        String value = sysProps.get(s);
+        writer.println("key: " + s);
+        writer.println("value: " + value);
+      }
+
+      writer.close();
+
+      // Get submitted job information
+      String projectName = props.get(AZKABAN_PROJECT_NAME_KEY);
+      String flowName = props.get(AZKABAN_WORKFLOW_NAME_KEY);
+      String jobName = props.get(AZKABAN_JOB_NAME_KEY);
+      String userPermission = props.getBoolean(RAIN_USER_PERMISSION);
+
+      // get elastic grid related system configuration
+      String rainEnable = sysProps.getBoolean(RAIN_ENABLE);
+      String userName = sysProps.get(RAIN_DB_USERNAME);
+      String password = sysProps.get(RAIN_DB_PASSWORD);
+      String dbHostname = sysProps.get(RAIN_DB_HOSTNAME);
+      String databaseName = sysProps.get(RAIN_DB_NAME);
+      String tableName = sysProps.get(RAIN_TABLE_NAME);
+
+      // Check if the job is suitable for running on online machines
+      if (elasticGrid != null && jobName != null && flowName != null && ProjectName != null
+          && !elasticGrid.equals("") && !jobName.equals("") && !flowName.equals("")
+          && !projectName.equals("") && rainEnable
+          && !userConsent.equals("") && userPermission) {
+
+        // initialize the connection to mysql database
+        Class.forName("com.mysql.jdbc.Driver").newInstance();
+        Connection conn = DriverManager.getConnection("jdbc:mysql://" + dbHostname + "/" + databaseName,
+            userName, password);
+
+        // user prepare statement for security and performance
+        stmt = conn.prepareStatement("SELECT * FROM ? WHERE jobname=? and flowname=? and "
+            + "projectname =?");
+        stmt.setString(1, tableName);
+        stmt.setString(2, jobName);
+        stmt.setString(3, flowName);
+        stmt.setString(4, projectName);
+
+        rs = stmt.executeQuery();
+
+        if (rs.next()) {
+          // This Azkaban job is one of candidate jobs, submit to Rain host
+          // For testing purposes, will replace these magic words later
+          conf.set("mapred.job.queue.name", "highlight");
+        }
+      }
+
       // Now write out the configuration file to inject.
       File file = getConfFile(props, workingDir, INJECT_FILE);
       OutputStream xmlOut = new FileOutputStream(file);
@@ -108,6 +210,38 @@ public class HadoopConfigurationInjector {
       xmlOut.close();
     } catch (Throwable e) {
       _logger.error("Encountered error while preparing the Hadoop configuration resource file", e);
+    } finally {
+      // release resources in a finally{} block
+      // in reverse-order of their creation
+      if (rs != null) {
+        try {
+          rs.close();
+        } catch (SQLException sqlEx) {
+          _logger.error(sqlEx.getMessage());
+        }
+
+        rs = null;
+      }
+
+      if (stmt != null) {
+        try {
+          stmt.close();
+        } catch (SQLException sqlEx) {
+          _logger.error(sqlEx.getMessage());
+        }
+
+        stmt = null;
+      }
+
+      if (conn != null) {
+        try {
+          conn.close();
+        } catch (SQLException sqlEx) {
+          _logger.error(sqlEx.getMessage());
+        }
+
+        conn = null;
+      }
     }
   }
 

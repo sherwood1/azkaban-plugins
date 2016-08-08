@@ -34,7 +34,7 @@ import azkaban.utils.Props;
 /**
  * HadoopShell is a Hadoop security enabled "command" jobtype. This jobtype
  * adheres to same format and other details as "command" jobtype.
- * 
+ *
  * @author gaggarwa
  *
  */
@@ -71,7 +71,7 @@ public class HadoopShell extends ProcessJob {
 	@Override
 	public void run() throws Exception {
 		setupHadoopOpts(getJobProps());
-		HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(), getWorkingDirectory());
+		HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(), getSysProps(), getWorkingDirectory());
 		if (shouldProxy && obtainTokens) {
 			userToProxy = getJobProps().getString("user.to.proxy");
 			getLog().info("Need to proxy. Getting tokens.");
@@ -104,7 +104,7 @@ public class HadoopShell extends ProcessJob {
 
 	/**
 	 * Append HADOOP_GLOBAL_OPTS with HADOOP_OPTS in the given props
-	 * 
+	 *
 	 * @param props
 	 */
 	private void setupHadoopOpts(Props props) {

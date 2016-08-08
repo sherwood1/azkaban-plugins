@@ -81,7 +81,7 @@ public class HadoopHiveJob extends JavaProcessJob {
 
   @Override
   public void run() throws Exception {
-    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(),
+    HadoopConfigurationInjector.prepareResourcesToInject(getJobProps(), getSysProps(),
         getWorkingDirectory());
 
     if (shouldProxy && obtainTokens) {
@@ -97,7 +97,7 @@ public class HadoopHiveJob extends JavaProcessJob {
     }
 
     try {
-      super.run();  
+      super.run();
     } catch (Throwable t) {
       t.printStackTrace();
       getLog().error("caught error running the job");
@@ -110,7 +110,7 @@ public class HadoopHiveJob extends JavaProcessJob {
         }
       }
     }
-  } 
+  }
 
   @Override
   protected String getJavaClass() {
@@ -270,7 +270,7 @@ public class HadoopHiveJob extends JavaProcessJob {
           .getPath();
     }
   }
-  
+
   /**
    * This cancel method, in addition to the default canceling behavior, also kills the MR jobs launched by Hive
    * on Hadoop
